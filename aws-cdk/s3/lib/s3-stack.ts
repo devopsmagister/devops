@@ -17,20 +17,27 @@ export class S3BucketStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const vpc = ec2.Vpc.fromLookup(this, 'vpc', {
-      vpcId: 'vpc-0d83f1f286b466198',
-    });
-
+    // const vpc = ec2.Vpc.fromLookup(this, 'vpc', {
+    //   vpcId: 'vpc-0d83f1f286b466198',
+    // });
+    const vpc = ec2.Vpc.fromLookup(this, 'vpc', { isDefault: true });
+    
+    const kmskey = new kms.Key(this, 's3BucketKMSKey', {
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      alias: "app-kms-key",
+    })
+    
     const s3Bucket = new s3.Bucket(this, 'test-424217468030-exampleBucket', {
       bucketName: 'test-424217468030-example-bucket',
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      encryptionKey: new kms.Key(this, 's3BucketKMSKey'),
+      encryptionKey: kmskey,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
     const repository = new ecr.Repository(this, 'Repository', {
       repositoryName: 'my-424217468030-ecr',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
   
@@ -56,7 +63,7 @@ export class S3BucketStack extends cdk.Stack {
       description: 'rds Security Group'
     });
 
-    rdsSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3306), 'allow ssh access from the world');
+    rdsSecurityGroup.addIngressRule(ec2.Peer.ipv4('10.0.0.0/8'), ec2.Port.tcp(3306), 'allow ssh access from the world');
     
 
 
@@ -79,15 +86,22 @@ export class S3BucketStack extends cdk.Stack {
 
     const engine = rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_15_2 });
 
-
+    const rdsParameterGroup = new rds.ParameterGroup(this, 'rdsparametergroup', {
+      engine: engine,
+      description: "prostgres parameter group",
+      parameters: {
+        'idle_session_timeout': '300',
+      },
+    })
+    
     
     new rds.DatabaseInstance(this, 'InstanceWithCustomizedSecret', {
       engine,
       vpc,
-      vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
-        onePerAz: true, // at most one subnet per AZ
-    },
+    //   vpcSubnets: {
+    //     subnetType: ec2.SubnetType.PUBLIC,
+    //     onePerAz: true, // at most one subnet per AZ
+    // },
       credentials: rds.Credentials.fromSecret(dbSecret),
       allocatedStorage: 20,
       allowMajorVersionUpgrade: false,
@@ -97,12 +111,18 @@ export class S3BucketStack extends cdk.Stack {
       deletionProtection: false,
       securityGroups: [rdsSecurityGroup],
       subnetGroup: subnetGroup,
+      parameterGroup: rdsParameterGroup,
 
 
     });
 
+    new cdk.CfnOutput(this, 'subnetdetails', {
+      value: ec2.SubnetType.PUBLIC,
+      exportName: 'subnetdetails-2',
+  });
     
 
     // s3Bucket.grantRead(new iam.AccountRootPrincipal());
   }
 }
+// new CfnOutput(this, 'ServiceAccountIamRole', { value: serviceAccount.role.roleArn });

@@ -28,7 +28,7 @@
 import * as cdk from 'aws-cdk-lib';
 
 import { S3BucketStack } from '../lib/s3-stack';
-const envUS  = {account: '000288798409', region: 'us-east-1' };
+const envUS  = {account: '042385351812', region: 'us-east-1' };
 const app = new cdk.App();
 new S3BucketStack(app, 'S3BucketStack',  { env: envUS });
 app.synth();
