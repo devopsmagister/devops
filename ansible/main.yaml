@@ -1,0 +1,35 @@
+      vars:
+        is_production: "{{ environment == 'production' }}"
+
+
+{# template.j2 #}
+
+{% if is_production %}
+This is the production environment.
+{% else %}
+This is not the production environment.
+{% endif %}
+
+
+
+---
+---
+- name: Copy File from Remote to Local
+  hosts: your_remote_host
+  tasks:
+    - name: Fetch the file
+      fetch:
+        src: /path/to/remote/file.txt  # Path to the file on the remote server
+        dest: /path/on/local/machine   # Local destination path
+        flat: yes                       # Flatten the directory structure
+
+---
+
+---
+- name: Copy File from Local to Remote
+  hosts: your_remote_host
+  tasks:
+    - name: Copy the file
+      copy:
+        src: /path/on/local/machine/file.txt  # Path to the local file
+        dest: /path/on/remote/server/         # Destination path on the remote server
