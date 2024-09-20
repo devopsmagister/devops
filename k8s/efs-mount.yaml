@@ -1,0 +1,102 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: efs-provisioner
+  namespace: default
+data:
+  # Update Filesystem ID here.
+  file.system.id: efs_id_update_here
+  # Update AWS Region here.
+  aws.region: region_update_here
+  provisioner.name: example.com/aws-efs
+  dns.name: ""
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: efs-provisioner
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: efs-provisioner  
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: efs-provisioner
+    spec:
+      serviceAccount: efs-provisioner
+      containers:
+        - name: efs-provisioner
+          image: quay.io/external_storage/efs-provisioner:latest
+          env:
+            - name: FILE_SYSTEM_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: efs-provisioner
+                  key: file.system.id
+            - name: AWS_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: efs-provisioner
+                  key: aws.region
+            - name: DNS_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: efs-provisioner
+                  key: dns.name
+                  optional: true
+            - name: PROVISIONER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: efs-provisioner
+                  key: provisioner.name
+          volumeMounts:
+            - name: pv-volume
+              mountPath: /persistentvolumes          
+      volumes:
+        - name: pv-volume
+          nfs:
+            # Update EFS DNS Name Here.
+            server: efs_id_update_here.efs.region_update_here.amazonaws.com
+            path: /
+# ---
+# Default Storage Class
+# kind: StorageClass
+# apiVersion: storage.k8s.io/v1
+# metadata:
+#   name: aws-efs
+# provisioner: example.com/aws-efs
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+  name: aws-efs
+  namespace: default
+provisioner: example.com/aws-efs
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: efs-pvc
+  namespace: default
+  annotations:
+    volume.beta.kubernetes.io/storage-class: "aws-efs"
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+    limits:
+      storage: 150Gi
+  storageClassName: aws-efs
+---

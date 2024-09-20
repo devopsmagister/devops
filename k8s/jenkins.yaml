@@ -1,0 +1,39 @@
+    agent {
+        kubernetes {
+          defaultContainer 'jnlp'
+          yaml """
+apiVersion: v1
+kind: Pod
+metadata:
+labels:
+  component: ci
+spec:
+  serviceAccountName: auto-app-jenkins-sa
+  containers:
+  - name: linuxbasictool
+    image: 618187721717.dkr.ecr.us-east-1.amazonaws.com/baseline-repository:linux-basic-tools-latest
+    imagePullPolicy: IfNotPresent
+    command:
+    - cat
+    tty: true  
+    volumeMounts:
+    - mountPath: /var/www/html
+      name: appstore-pvc
+      subPath: appstore-files      
+  - name: docker
+    image: 618187721717.dkr.ecr.us-east-1.amazonaws.com/baseline-repository:docker-latest
+    imagePullPolicy: IfNotPresent
+    command:
+    - cat
+    tty: true  
+    volumeMounts:  
+    - mountPath: /var/run/docker.sock
+      name: docker-sock       
+  volumes:
+    - name: appstore-pvc
+      persistentVolumeClaim:
+        claimName: appstore-pvc 
+    - name: docker-sock
+      hostPath:
+        path: /var/run/docker.sock                   
+"""
