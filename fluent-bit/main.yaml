@@ -1,0 +1,57 @@
+[SERVICE]
+    Flush          5
+    Log_Level      debug
+    Parsers_File   parsers.conf
+
+[INPUT]
+    Name           tail
+    Path           /var/log/cpd-**/*.log
+    Tag            cpd-**
+    DB             /var/log/flb_cpd.db
+    Refresh_Interval 5
+
+[FILTER]
+    Name           record_modifier
+    Match          cpd-**
+    Remove_key     log
+
+[FILTER]
+    Name           rewrite_tag
+    Match          cpd-**
+    Rule           $logType (.+) $1.${TAG}
+
+[OUTPUT]
+    Name           es
+    Match          audit.cpd-**
+    Host           xxxx
+    Port           443
+    HTTP_User      adminuser
+    HTTP_Passwd    xxxx
+    Index          cpd_audit
+    Type           _doc
+    Logstash_Format On
+    Logstash_Prefix cpd_audit
+    Logstash_DateFormat %Y.%m
+    Retry_Limit    False
+    Tls            On
+    Tls.verify     Off
+    Tls.min_version TLSv1_2
+    Buffer_Size    32m
+
+[OUTPUT]
+    Name           es
+    Match          svc.cpd-**
+    Host           xxxx
+    Port           443
+    HTTP_User      adminuser
+    HTTP_Passwd    xxxx
+    Index          cpd_log
+    Type           _doc
+    Logstash_Format On
+    Logstash_Prefix cpd_log
+    Logstash_DateFormat %Y.%m
+    Retry_Limit    False
+    Tls            On
+    Tls.verify     Off
+    Tls.min_version TLSv1_2
+    Buffer_Size    32m
